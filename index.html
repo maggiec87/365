@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>365打卡</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* 默认变量，会被JS动态替换 */
+            --primary: #FF9A9E; 
+            --primary-gradient: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
+            --bg: #FFF9F2;
+            --card: #ffffff;
+            --text: #555;
+            --text-light: #999;
+        }
+
+        body {
+            font-family: "Nunito", "Muli", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            padding-bottom: 120px; /* 增加底部留白给心情框 */
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.5s ease;
+        }
+        
+        /* 顶部导航 */
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 20px 20px 45px 20px;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 10;
+            transition: background 0.5s ease;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        /* 换肤按钮 */
+        .theme-btn {
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: transform 0.2s;
+        }
+        .theme-btn:active { transform: scale(0.9); }
+
+        /* 日期与天气区域 */
+        .date-weather-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .date-picker {
+            background: rgba(255,255,255,0.3);
+            border: 1px solid rgba(255,255,255,0.5);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+            outline: none;
+            backdrop-filter: blur(5px);
+            font-size: 0.9rem;
+        }
+        .weekday-badge {
+            background: rgba(255,255,255,0.3);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .weather-btn {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* 悬浮统计卡片 */
+        .stats-card {
+            background: white;
+            margin: -35px 20px 20px 20px;
+            padding: 15px 20px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .stats-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; }
+        .points-badge { 
+            background: #fff8e1; color: #f6b93b; 
+            border: 1px solid #ffeaa7;
+            padding: 4px 12px; border-radius: 12px; font-weight: bold; 
+        }
+
+        .progress-bar-bg {
+            height: 10px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 10px;
+        }
+
+        .container { padding: 10px 20px; max-width: 600px; margin: 0 auto; }
+
+        /* 分类卡片 */
+        .category-card {
+            background: var(--card);
+            border-radius: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.02);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .category-card:active { transform: scale(0.99); }
+
+        .category-header {
+            padding: 15px 20px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #444;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.5);
+        }
+        .cat-indicator {
+            width: 6px; height: 18px; border-radius: 3px; 
+            margin-right: 10px; display: inline-block; vertical-align: middle;
+        }
+
+        .task-list { list-style: none; padding: 0; margin: 0; }
+        .task-item {
+            padding: 15px 20px;
+            border-top: 1px solid #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+        .task-item:hover { background: #fcfcfc; }
+        .task-left { display: flex; align-items: center; flex: 1; }
+        
+        .icon-box {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 12px;
+            font-size: 16px;
+            color: white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .custom-checkbox {
+            width: 24px; height: 24px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            margin-right: 15px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            flex-shrink: 0;
+        }
+        .custom-checkbox.checked {
+            background: var(--primary); /* 跟随主题色 */
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+        .custom-checkbox.checked::after {
+            content: '\f00c';
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: white;
+            font-size: 14px;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .task-info { display: flex; flex-direction: column; }
+        .task-name { font-size: 1rem; font-weight: 600; color: #444; }
+        .task-meta { font-size: 0.75rem; color: #aaa; margin-top: 4px; font-weight: 500; }
+        .completed-text .task-name { text-decoration: line-through; color: #ccc; }
+        .completed-text .icon-box { filter: grayscale(100%); opacity: 0.5; }
+
+        .btn-icon { 
+            border: none; background: #f0f2f5; color: #888; 
+            width: 30px; height: 30px; border-radius: 50%; 
+            cursor: pointer; margin-left: 5px; 
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* 心情日记区域 */
+        .emotion-section {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .emotion-title { font-size: 0.9rem; color: #888; margin-bottom: 8px; font-weight: bold; }
+        .emotion-input {
+            width: 100%;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 10px;
+            font-family: inherit;
+            resize: none;
+            box-sizing: border-box;
+            background: #fcfcfc;
+            color: #555;
+            outline: none;
+            transition: border 0.3s;
+        }
+        .emotion-input:focus { border-color: var(--primary); background: white; }
+
+        /* 底部栏 */
+        .bottom-bar {
+            position: fixed;
+            bottom: 20px; left: 20px; right: 20px;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            padding: 10px 15px;
+            border-radius: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .btn-main {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            flex: 1;
+            margin-left: 15px;
+            transition: transform 0.1s;
+        }
+        .btn-main:active { transform: scale(0.95); }
+        .btn-ghost {
+            background: transparent; border: 1px solid #eee; color: #888;
+            padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; cursor: pointer;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3); z-index: 200; backdrop-filter: blur(2px);
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: white; padding: 25px; border-radius: 24px; width: 80%; max-width: 360px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .form-control {
+            width: 100%; padding: 12px; margin-top: 5px;
+            border: 2px solid #f0f0f0; border-radius: 12px;
+            box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s;
+        }
+        .form-control:focus { border-color: var(--primary); outline: none; }
+        
+        .icon-select { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; justify-content: center; }
+        .icon-option { 
+            width: 36px; height: 36px; border-radius: 50%; background: #f0f0f0; color: #888;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .icon-option.selected { background: var(--primary); color: white; transform: scale(1.1); }
+
+        /* 颜色选择网格 */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .theme-item {
+            display: flex; flex-direction: column; align-items: center; cursor: pointer;
+        }
+        .theme-dot {
+            width: 40px; height: 40px; border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            margin-bottom: 5px;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .theme-item:hover .theme-dot { transform: scale(1.1); }
+        .theme-name { font-size: 0.75rem; color: #888; }
+
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-top">
+        <!-- 换肤按钮 -->
+        <button class="theme-btn" onclick="openThemeModal()">
+            <i class="fas fa-tshirt"></i>
+        </button>
+        <h3 style="margin:0; font-size: 1.2rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">365打卡</h3>
+        <div style="width:36px"></div> <!-- 占位符保持居中 -->
+    </div>
+    
+    <!-- 日期与天气行 -->
+    <div class="date-weather-row">
+        <input type="date" id="datePicker" class="date-picker">
+        <span id="weekdayDisplay" class="weekday-badge">周一</span>
+        <button id="weatherBtn" class="weather-btn" onclick="toggleWeather()">☀️</button>
+    </div>
+</div>
+
+<div class="stats-card">
+    <div class="stats-row">
+        <span style="color:#888">今日金币</span>
+        <span class="points-badge">💰 <span id="todayPoints">0</span></span>
+    </div>
+    <div class="stats-row" style="margin-top:5px;">
+        <span style="font-size:0.8rem; color:#aaa">完成度 <span id="todayPercent">0%</span></span>
+    </div>
+    <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+</div>
+
+<div class="container" id="appContainer">
+    <!-- 动态生成的内容 -->
+</div>
+
+<div class="container">
+    <!-- 心情日记 -->
+    <div class="emotion-section">
+        <div class="emotion-title">📝 Today Emotion</div>
+        <textarea id="emotionInput" class="emotion-input" rows="2" placeholder="今天心情怎么样？写下来吧..."></textarea>
+    </div>
+
+    <div style="text-align: center; margin: 20px 0 50px 0;">
+        <button class="btn-ghost" onclick="showAddCategoryModal()">+ 新类别</button>
+        <button class="btn-ghost" onclick="exportData()" style="margin-left: 10px;">💾 备份</button>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <span id="statusMsg" style="font-size: 0.75rem; color: #aaa;">✨ 积攒金币，兑换快乐</span>
+    <button class="btn-main" onclick="saveData(true)">保存进度</button>
+</div>
+
+<!-- 任务模态框 -->
+<div id="taskModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle" style="margin-top:0; color:#444;">添加任务</h3>
+        <input type="hidden" id="modalCatId">
+        <input type="hidden" id="modalTaskId">
+        
+        <div style="margin-bottom:15px">
+            <label style="font-size:0.9rem;color:#888;font-weight:bold">任务名称</label>
+            <input type="text" id="taskNameInput" class="form-control" placeholder="例如：做瑜伽">
+        </div>
+        
+        <div style="margin-bottom:15px">
+            <label style="font-size:0.9rem;color:#888;font-weight:bold">奖励金币 (💰)</label>
+            <input type="number" id="taskPointsInput" class="form-control" value="10">
+        </div>
+
+        <div style="margin-bottom:20px">
+            <label style="font-size:0.9rem;color:#888;font-weight:bold">选择图标</label>
+            <div class="icon-select" id="iconSelector"></div>
+            <input type="text" id="customIconInput" class="form-control" placeholder="或 FontAwesome 类名" style="margin-top:10px; font-size:0.8rem;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn-ghost" onclick="closeModal('taskModal')">取消</button>
+            <button class="btn-main" style="margin:0; flex:none; padding: 10px 25px;" onclick="confirmSaveTask()">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 类别模态框 -->
+<div id="catModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:#444;">新增类别</h3>
+        <div style="margin-bottom:15px">
+            <label style="font-size:0.9rem;color:#888;font-weight:bold">类别名称</label>
+            <input type="text" id="catNameInput" class="form-control" placeholder="例如：运动">
+        </div>
+        <div style="margin-bottom:20px">
+            <label style="font-size:0.9rem;color:#888;font-weight:bold">主题色 (Hex)</label>
+            <input type="text" id="catColorInput" class="form-control" value="#ff9a9e">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn-ghost" onclick="closeModal('catModal')">取消</button>
+            <button class="btn-main" style="margin:0; flex:none; padding: 10px 25px;" onclick="confirmAddCategory()">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 换肤模态框 -->
+<div id="themeModal" class="modal">
+    <div class="modal-content" style="text-align:center;">
+        <h3 style="margin-top:0; color:#444;">选择皮肤</h3>
+        <p style="font-size:0.8rem; color:#aaa; margin-bottom:15px;">点击颜色即可切换</p>
+        
+        <div class="theme-grid">
+            <div class="theme-item" onclick="switchTheme('pink')">
+                <div class="theme-dot" style="background: #FF9A9E;"></div>
+                <span class="theme-name">草莓牛奶</span>
+            </div>
+            <div class="theme-item" onclick="switchTheme('blue')">
+                <div class="theme-dot" style="background: #a1c4fd;"></div>
+                <span class="theme-name">海盐蓝</span>
+            </div>
+            <div class="theme-item" onclick="switchTheme('green')">
+                <div class="theme-dot" style="background: #84fab0;"></div>
+                <span class="theme-name">薄荷绿</span>
+            </div>
+            <div class="theme-item" onclick="switchTheme('purple')">
+                <div class="theme-dot" style="background: #a18cd1;"></div>
+                <span class="theme-name">香芋紫</span>
+            </div>
+            <div class="theme-item" onclick="switchTheme('yellow')">
+                <div class="theme-dot" style="background: #fccb90;"></div>
+                <span class="theme-name">柠檬黄</span>
+            </div>
+        </div>
+
+        <button class="btn-ghost" onclick="closeModal('themeModal')" style="margin-top:20px; width:100%">关闭</button>
+    </div>
+</div>
+
+<script>
+    // --- 1. 配色方案配置 ---
+    const themes = {
+        pink: {
+            primary: '#FF9A9E',
+            gradient: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)',
+            bg: '#FFF9F2'
+        },
+        blue: {
+            primary: '#a1c4fd',
+            gradient: 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)',
+            bg: '#f0f8ff'
+        },
+        green: {
+            primary: '#84fab0',
+            gradient: 'linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%)',
+            bg: '#f0fff4'
+        },
+        purple: {
+            primary: '#a18cd1',
+            gradient: 'linear-gradient(120deg, #a18cd1 0%, #fbc2eb 100%)',
+            bg: '#fdfaff'
+        },
+        yellow: {
+            primary: '#fccb90',
+            gradient: 'linear-gradient(120deg, #f6d365 0%, #fda085 100%)',
+            bg: '#fffdf0'
+        }
+    };
+
+    // --- 2. 数据结构 ---
+    const defaultData = {
+        categories: [
+            {
+                id: 'cat_health', name: '健康生活', color: '#84fab0', 
+                tasks: [
+                    { id: 't_run', name: '晨跑3公里', icon: 'fa-person-running', points: 20 },
+                    { id: 't_water', name: '喝水8杯', icon: 'fa-glass-water', points: 5 },
+                    { id: 't_fruit', name: '吃水果', icon: 'fa-carrot', points: 10 }
+                ]
+            },
+            {
+                id: 'cat_study', name: '自我提升', color: '#a18cd1',
+                tasks: [
+                    { id: 't_read', name: '阅读30分钟', icon: 'fa-book-open', points: 15 },
+                    { id: 't_word', name: '背单词', icon: 'fa-language', points: 10 }
+                ]
+            },
+            {
+                id: 'cat_ent', name: '快乐时光', color: '#ff9a9e',
+                tasks: [
+                    { id: 't_game', name: '游戏时间', icon: 'fa-gamepad', points: 5 },
+                    { id: 't_movie', name: '追剧/电影', icon: 'fa-film', points: 10 }
+                ]
+            },
+            {
+                id: 'cat_family', name: '温馨家庭', color: '#fccb90',
+                tasks: [
+                    { id: 't_clean', name: '整理房间', icon: 'fa-broom', points: 15 },
+                    { id: 't_cook', name: '做一顿饭', icon: 'fa-utensils', points: 20 }
+                ]
+            }
+        ],
+        records: {},
+        dailyInfo: {} // 新增：存储每天的天气和心情
+    };
+
+    let appData = JSON.parse(localStorage.getItem('pwa_365_data')) || defaultData;
+    const datePicker = document.getElementById('datePicker');
+    datePicker.valueAsDate = new Date();
+    const commonIcons = ['fa-star', 'fa-heart', 'fa-music', 'fa-book', 'fa-cat', 'fa-dog', 'fa-lemon', 'fa-mug-hot', 'fa-bicycle', 'fa-camera', 'fa-ghost', 'fa-gift'];
+    
+    // 天气选项
+    const weatherOptions = ['☀️', '☁️', '🌧️', '❄️', '🌪️'];
+
+    // --- 3. 核心逻辑 ---
+
+    function init() {
+        // 加载保存的主题
+        const savedTheme = localStorage.getItem('pwa_theme_choice') || 'pink';
+        switchTheme(savedTheme);
+
+        renderApp();
+        renderIcons();
+        updateDateInfo(); // 初始化日期和星期
+        datePicker.addEventListener('change', () => {
+            updateDateInfo();
+            renderApp();
+        });
+    }
+
+    function switchTheme(themeName) {
+        const t = themes[themeName];
+        if (!t) return;
+        
+        const root = document.documentElement;
+        root.style.setProperty('--primary', t.primary);
+        root.style.setProperty('--primary-gradient', t.gradient);
+        root.style.setProperty('--bg', t.bg);
+        
+        localStorage.setItem('pwa_theme_choice', themeName);
+        closeModal('themeModal');
+    }
+
+    function getSelectedDate() { return datePicker.value; }
+
+    function updateDateInfo() {
+        const dateStr = getSelectedDate();
+        const dateObj = new Date(dateStr);
+        const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        document.getElementById('weekdayDisplay').innerText = days[dateObj.getDay()];
+    }
+
+    // 切换天气
+    function toggleWeather() {
+        const dateKey = getSelectedDate();
+        if (!appData.dailyInfo) appData.dailyInfo = {};
+        if (!appData.dailyInfo[dateKey]) appData.dailyInfo[dateKey] = {};
+
+        let current = appData.dailyInfo[dateKey].weather || '☀️';
+        let idx = weatherOptions.indexOf(current);
+        let nextIdx = (idx + 1) % weatherOptions.length;
+        let nextWeather = weatherOptions[nextIdx];
+
+        appData.dailyInfo[dateKey].weather = nextWeather;
+        document.getElementById('weatherBtn').innerText = nextWeather;
+        saveData(false);
+    }
+
+    function renderApp() {
+        const container = document.getElementById('appContainer');
+        container.innerHTML = '';
+        const dateKey = getSelectedDate();
+        const dayRecords = appData.records[dateKey] || {};
+        
+        // 渲染天气和心情
+        if (!appData.dailyInfo) appData.dailyInfo = {};
+        const dayInfo = appData.dailyInfo[dateKey] || {};
+        document.getElementById('weatherBtn').innerText = dayInfo.weather || '☀️';
+        document.getElementById('emotionInput').value = dayInfo.emotion || '';
+
+        let totalPoints = 0;
+        let earnedPoints = 0;
+        let totalTasks = 0;
+        let completedTasks = 0;
+
+        appData.categories.forEach(cat => {
+            const catDiv = document.createElement('div');
+            catDiv.className = 'category-card';
+            
+            let tasksHtml = '';
+            cat.tasks.forEach(task => {
+                const isChecked = dayRecords[task.id] === true;
+                
+                totalTasks++;
+                totalPoints += parseInt(task.points);
+                if (isChecked) {
+                    completedTasks++;
+                    earnedPoints += parseInt(task.points);
+                }
+
+                const iconStyle = `background: ${cat.color}`;
+
+                tasksHtml += `
+                    <li class="task-item">
+                        <div class="task-left" onclick="toggleTask('${task.id}', ${!isChecked})">
+                            <div class="custom-checkbox ${isChecked ? 'checked' : ''}"></div>
+                            <div class="icon-box" style="${iconStyle}">
+                                <i class="fas ${task.icon}"></i>
+                            </div>
+                            <div class="task-info ${isChecked ? 'completed-text' : ''}">
+                                <span class="task-name">${task.name}</span>
+                                <span class="task-meta">💰 +${task.points} 金币</span>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-icon" onclick="event.stopPropagation(); openEditTask('${cat.id}', '${task.id}')"><i class="fas fa-pen"></i></button>
+                            <button class="btn-icon" onclick="event.stopPropagation(); deleteTask('${cat.id}', '${task.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </li>
+                `;
+            });
+
+            catDiv.innerHTML = `
+                <div class="category-header">
+                    <div>
+                        <span class="cat-indicator" style="background:${cat.color}"></span>
+                        <span>${cat.name}</span>
+                    </div>
+                    <button class="btn-icon" onclick="openAddTask('${cat.id}')"><i class="fas fa-plus"></i></button>
+                </div>
+                <ul class="task-list">${tasksHtml}</ul>
+            `;
+            container.appendChild(catDiv);
+        });
+
+        animateValue("todayPoints", parseInt(document.getElementById('todayPoints').innerText), earnedPoints, 500);
+        
+        const percent = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+        document.getElementById('todayPercent').innerText = percent + '%';
+        document.getElementById('progressBar').style.width = percent + '%';
+    }
+
+    function animateValue(id, start, end, duration) {
+        if (start === end) return;
+        const range = end - start;
+        let current = start;
+        const increment = end > start ? 1 : -1;
+        const stepTime = Math.abs(Math.floor(duration / range));
+        const obj = document.getElementById(id);
+        const timer = setInterval(function() {
+            current += increment;
+            obj.innerHTML = current;
+            if (current == end) { clearInterval(timer); }
+        }, Math.max(stepTime, 10));
+    }
+
+    function toggleTask(taskId, isChecked) {
+        const dateKey = getSelectedDate();
+        if (!appData.records[dateKey]) {
+            appData.records[dateKey] = {};
+        }
+        appData.records[dateKey][taskId] = isChecked;
+        renderApp();
+        document.getElementById('statusMsg').innerText = '📝 记得点保存哦~';
+    }
+
+    function saveData(showAlert = false) {
+        // 保存心情
+        const dateKey = getSelectedDate();
+        const emotion = document.getElementById('emotionInput').value;
+        if (!appData.dailyInfo) appData.dailyInfo = {};
+        if (!appData.dailyInfo[dateKey]) appData.dailyInfo[dateKey] = {};
+        appData.dailyInfo[dateKey].emotion = emotion;
+        // 天气在切换时已经保存了
+
+        localStorage.setItem('pwa_365_data', JSON.stringify(appData));
+        document.getElementById('statusMsg').innerText = '✅ 进度已保存';
+        if(showAlert) alert('保存成功！明天也要继续加油鸭！');
+    }
+
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "365_habit_backup_" + getSelectedDate() + ".json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    // --- 4. 模态框逻辑 ---
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openThemeModal() { document.getElementById('themeModal').style.display = 'flex'; }
+
+    function renderIcons() {
+        const container = document.getElementById('iconSelector');
+        container.innerHTML = commonIcons.map(icon => 
+            `<div class="icon-option" onclick="selectIcon(this, '${icon}')"><i class="fas ${icon}"></i></div>`
+        ).join('');
+    }
+
+    function selectIcon(el, iconClass) {
+        document.querySelectorAll('.icon-option').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('customIconInput').value = iconClass;
+    }
+
+    function openAddTask(catId) {
+        document.getElementById('modalTitle').innerText = '添加新挑战';
+        document.getElementById('modalCatId').value = catId;
+        document.getElementById('modalTaskId').value = ''; 
+        document.getElementById('taskNameInput').value = '';
+        document.getElementById('taskPointsInput').value = '10';
+        document.getElementById('customIconInput').value = 'fa-star';
+        document.getElementById('taskModal').style.display = 'flex';
+    }
+
+    function openEditTask(catId, taskId) {
+        const cat = appData.categories.find(c => c.id === catId);
+        const task = cat.tasks.find(t => t.id === taskId);
+        
+        document.getElementById('modalTitle').innerText = '修改任务';
+        document.getElementById('modalCatId').value = catId;
+        document.getElementById('modalTaskId').value = taskId;
+        document.getElementById('taskNameInput').value = task.name;
+        document.getElementById('taskPointsInput').value = task.points;
+        document.getElementById('customIconInput').value = task.icon;
+        document.getElementById('taskModal').style.display = 'flex';
+    }
+
+    function confirmSaveTask() {
+        const catId = document.getElementById('modalCatId').value;
+        const taskId = document.getElementById('modalTaskId').value;
+        const name = document.getElementById('taskNameInput').value;
+        const points = document.getElementById('taskPointsInput').value;
+        const icon = document.getElementById('customIconInput').value || 'fa-star';
+
+        if (!name) return alert('请给任务起个名字吧~');
+
+        const catIndex = appData.categories.findIndex(c => c.id === catId);
+        if (catIndex === -1) return;
+
+        if (taskId) {
+            const taskIndex = appData.categories[catIndex].tasks.findIndex(t => t.id === taskId);
+            appData.categories[catIndex].tasks[taskIndex] = { id: taskId, name, points, icon };
+        } else {
+            const newId = 't_' + Date.now();
+            appData.categories[catIndex].tasks.push({ id: newId, name, points, icon });
+        }
+
+        saveData(false);
+        closeModal('taskModal');
+        renderApp();
+    }
+
+    function deleteTask(catId, taskId) {
+        if(!confirm('确定要删除这个任务吗？')) return;
+        const catIndex = appData.categories.findIndex(c => c.id === catId);
+        appData.categories[catIndex].tasks = appData.categories[catIndex].tasks.filter(t => t.id !== taskId);
+        saveData(false);
+        renderApp();
+    }
+
+    function showAddCategoryModal() {
+        document.getElementById('catNameInput').value = '';
+        document.getElementById('catModal').style.display = 'flex';
+    }
+
+    function confirmAddCategory() {
+        const name = document.getElementById('catNameInput').value;
+        const color = document.getElementById('catColorInput').value || '#ff9a9e';
+        if (!name) return alert('请输入类别名称');
+
+        appData.categories.push({
+            id: 'cat_' + Date.now(),
+            name: name,
+            color: color,
+            tasks: []
+        });
+        saveData(false);
+        closeModal('catModal');
+        renderApp();
+    }
+
+    init();
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+    }
+</script>
+</body>
+</html>
