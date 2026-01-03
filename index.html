@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>365打卡</title>
+    <link rel="manifest" href="manifest.json"> <!-- 确保这里有manifest链接 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -167,6 +168,7 @@
             align-items: center;
             justify-content: space-between;
             transition: background 0.2s;
+            flex-wrap: wrap; /* 允许内容换行 */
         }
         .task-item:hover { background: #fcfcfc; }
         .task-left { display: flex; align-items: center; flex: 1; }
@@ -208,7 +210,11 @@
             transform: translate(-50%, -50%);
         }
 
-        .task-info { display: flex; flex-direction: column; }
+        .task-info { 
+            display: flex; 
+            flex-direction: column; 
+            flex-grow: 1; /* 允许任务信息区域扩展 */
+        }
         .task-name { font-size: 1rem; font-weight: 600; color: #444; }
         .task-meta { font-size: 0.75rem; color: #aaa; margin-top: 4px; font-weight: 500; }
         .completed-text .task-name { text-decoration: line-through; color: #ccc; }
@@ -220,6 +226,63 @@
             cursor: pointer; margin-left: 5px; 
             display: flex; align-items: center; justify-content: center;
         }
+
+        /* 备注提示文本 */
+        .remark-prompt {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+            padding: 5px 8px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: inline-block;
+            max-width: calc(100% - 10px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            border: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        .remark-prompt:hover {
+            background: #e9e9e9;
+        }
+        .completed-text .remark-prompt {
+            text-decoration: none;
+            opacity: 0.7;
+        }
+
+        /* 备注输入框样式 */
+        .task-remark-textarea {
+            width: 100%;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 8px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            color: #555;
+            margin-top: 8px;
+            box-sizing: border-box;
+            resize: vertical; /* 允许垂直方向调整大小 */
+            min-height: 40px; /* 最小高度 */
+            background: #fcfcfc;
+            outline: none;
+            transition: border-color 0.3s;
+            display: block; /* 默认显示 */
+        }
+        .task-remark-textarea:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+        /* 隐藏未激活的备注输入框 */
+        .task-remark-wrapper {
+            width: 100%;
+            margin-top: 5px;
+        }
+        .task-remark-wrapper.hidden {
+            display: none;
+        }
+
 
         /* 心情日记区域 */
         .emotion-section {
@@ -372,18 +435,18 @@
     <!-- 心情日记 -->
     <div class="emotion-section">
         <div class="emotion-title">📝 今日感想 </div>
-        <textarea id="emotionInput" class="emotion-input" rows="2" placeholder="今天心情怎么样？写下来吧..."></textarea>
+        <textarea id="emotionInput" class="emotion-input" rows="2" placeholder="今天心情怎么样？写下来吧..." oninput="updateEmotion(this.value)"></textarea>
     </div>
 
     <div style="text-align: center; margin: 20px 0 50px 0;">
-        <button class="btn-ghost" onclick="showAddCategoryModal()">+ 新类别</button>
-        <button class="btn-ghost" onclick="exportData()" style="margin-left: 10px;">💾 备份</button>
+        <button class="btn-ghost" onclick="showAddCategoryModal()">+ 添加</button>
+        <button class="btn-ghost" onclick="exportData()" style="margin-left: 10px;">💾导出</button>
     </div>
 </div>
 
 <div class="bottom-bar">
-    <span id="statusMsg" style="font-size: 0.75rem; color: #aaa;">✨ 积攒金币，兑换快乐</span>
-    <button class="btn-main" onclick="saveData(true)">保存进度</button>
+    <span id="statusMsg" style="font-size: 0.75rem; color: #aaa;">✨金币up</span>
+    <button class="btn-main" onclick="saveData(true)">保存</button>
 </div>
 
 <!-- 任务模态框 -->
@@ -504,35 +567,33 @@
             {
                 id: 'cat_health', name: '健康', color: '#84fab0', 
                 tasks: [
-                    { id: 't_run', name: '晨跑3公里', icon: 'fa-person-running', points: 20 },
-                    { id: 't_water', name: '喝水8杯', icon: 'fa-glass-water', points: 5 },
-                    { id: 't_fruit', name: '吃水果', icon: 'fa-carrot', points: 10 }
+                    { id: 't_run', name: '早睡', icon: 'fa-person-running', points: 20 },
+                    { id: 't_water', name: '运动', icon: 'fa-glass-water', points: 5 },
+                    { id: 't_fruit', name: '吃喝', icon: 'fa-carrot', points: 10 }
                 ]
             },
             {
                 id: 'cat_study', name: '学习', color: '#a18cd1',
                 tasks: [
-                    { id: 't_read', name: '阅读30分钟', icon: 'fa-book-open', points: 15 },
-                    { id: 't_word', name: '背单词', icon: 'fa-language', points: 10 }
+                    { id: 't_read', name: '阅读', icon: 'fa-book-open', points: 15 },
+                    { id: 't_word', name: '英语', icon: 'fa-language', points: 10 }
                 ]
             },
             {
                 id: 'cat_ent', name: '快乐', color: '#ff9a9e',
                 tasks: [
-                    { id: 't_game', name: '游戏时间', icon: 'fa-gamepad', points: 5 },
-                    { id: 't_movie', name: '追剧/电影', icon: 'fa-film', points: 10 }
+                    { id: 't_game', name: '游戏时间', icon: 'fa-gamepad', points: 5 } // 只保留一项
                 ]
             },
             {
                 id: 'cat_family', name: '家庭', color: '#fccb90',
                 tasks: [
-                    { id: 't_clean', name: '整理房间', icon: 'fa-broom', points: 15 },
-                    { id: 't_cook', name: '做一顿饭', icon: 'fa-utensils', points: 20 }
+                    { id: 't_clean', name: '整理房间', icon: 'fa-broom', points: 15 } // 只保留一项
                 ]
             }
         ],
-        records: {},
-        dailyInfo: {} // 新增：存储每天的天气和心情
+        records: {}, // 每日记录现在将存储 { taskId: { checked: true/false, remark: '...' } }
+        dailyInfo: {} // 存储每天的天气和心情
     };
 
     let appData = JSON.parse(localStorage.getItem('pwa_365_data')) || defaultData;
@@ -594,14 +655,30 @@
 
         appData.dailyInfo[dateKey].weather = nextWeather;
         document.getElementById('weatherBtn').innerText = nextWeather;
-        saveData(false);
+        saveData(false); // 天气变化也需要保存
     }
+
+    // 更新每日心情
+    function updateEmotion(value) {
+        const dateKey = getSelectedDate();
+        if (!appData.dailyInfo) appData.dailyInfo = {};
+        if (!appData.dailyInfo[dateKey]) appData.dailyInfo[dateKey] = {};
+        appData.dailyInfo[dateKey].emotion = value;
+        // 不立即调用 saveData，等待用户点击保存按钮，或在切换日期时自动保存
+        document.getElementById('statusMsg').innerText = '📝 保存~';
+    }
+
 
     function renderApp() {
         const container = document.getElementById('appContainer');
         container.innerHTML = '';
         const dateKey = getSelectedDate();
-        const dayRecords = appData.records[dateKey] || {};
+        
+        // 确保 appData.records[dateKey] 是一个对象
+        if (!appData.records[dateKey]) {
+            appData.records[dateKey] = {};
+        }
+        const dayRecords = appData.records[dateKey];
         
         // 渲染天气和心情
         if (!appData.dailyInfo) appData.dailyInfo = {};
@@ -620,7 +697,10 @@
             
             let tasksHtml = '';
             cat.tasks.forEach(task => {
-                const isChecked = dayRecords[task.id] === true;
+                // 获取该任务在当前日期的记录，如果不存在则默认为未勾选且无备注
+                const taskRecord = dayRecords[task.id] || { checked: false, remark: '' };
+                const isChecked = taskRecord.checked;
+                const remarkText = taskRecord.remark;
                 
                 totalTasks++;
                 totalPoints += parseInt(task.points);
@@ -633,7 +713,7 @@
 
                 tasksHtml += `
                     <li class="task-item">
-                        <div class="task-left" onclick="toggleTask('${task.id}', ${!isChecked})">
+                        <div class="task-left" onclick="toggleTask('${task.id}')">
                             <div class="custom-checkbox ${isChecked ? 'checked' : ''}"></div>
                             <div class="icon-box" style="${iconStyle}">
                                 <i class="fas ${task.icon}"></i>
@@ -641,6 +721,24 @@
                             <div class="task-info ${isChecked ? 'completed-text' : ''}">
                                 <span class="task-name">${task.name}</span>
                                 <span class="task-meta">💰 +${task.points} 金币</span>
+                                <div id="remarkWrapper_${task.id}" class="task-remark-wrapper ${isChecked ? '' : 'hidden'}">
+                                    <div 
+                                        class="remark-prompt" 
+                                        onclick="event.stopPropagation(); activateRemarkInput('${task.id}', '${dateKey}')" 
+                                        style="${remarkText ? 'display: none;' : 'display: inline-block;'}"
+                                    >${remarkText ? remarkText : '添加备注...'}</div>
+                                    <textarea 
+                                        class="task-remark-textarea" 
+                                        id="remarkInput_${task.id}"
+                                        data-task-id="${task.id}" 
+                                        data-date-key="${dateKey}" 
+                                        oninput="updateRemark(this)" 
+                                        onblur="deactivateRemarkInput('${task.id}')"
+                                        maxlength="200"
+                                        rows="1"
+                                        style="${remarkText ? 'display: block;' : 'display: none;'}"
+                                    >${remarkText}</textarea>
+                                </div>
                             </div>
                         </div>
                         <div class="task-actions">
@@ -685,35 +783,137 @@
         }, Math.max(stepTime, 10));
     }
 
-    function toggleTask(taskId, isChecked) {
+    function toggleTask(taskId) {
         const dateKey = getSelectedDate();
         if (!appData.records[dateKey]) {
             appData.records[dateKey] = {};
         }
-        appData.records[dateKey][taskId] = isChecked;
-        renderApp();
-        document.getElementById('statusMsg').innerText = '📝 记得点保存哦~';
+        
+        let currentRecord = appData.records[dateKey][taskId] || { checked: false, remark: '' };
+        currentRecord.checked = !currentRecord.checked; // 切换勾选状态
+
+        if (!currentRecord.checked) { // 如果取消勾选，则清空备注
+            currentRecord.remark = '';
+        }
+        
+        appData.records[dateKey][taskId] = currentRecord;
+        
+        saveData(false);
+        renderApp(); // 重新渲染以更新UI，包括备注文本框的显示/隐藏
+        document.getElementById('statusMsg').innerText = '📝 保存~';
+    }
+
+    // 激活备注输入框
+    function activateRemarkInput(taskId, dateKey) {
+        event.stopPropagation(); // 阻止事件冒泡到父级，避免再次触发 toggleTask
+        const prompt = document.querySelector(`#remarkWrapper_${taskId} .remark-prompt`);
+        const textarea = document.getElementById(`remarkInput_${taskId}`);
+        
+        if (prompt && textarea) {
+            prompt.style.display = 'none';
+            textarea.style.display = 'block';
+            textarea.focus(); // 聚焦到文本框
+            // 确保文本框内容与数据同步
+            const record = appData.records[dateKey]?.[taskId] || { checked: false, remark: '' };
+            textarea.value = record.remark;
+        }
+    }
+
+    // 失去焦点时，如果备注为空，则隐藏文本框显示提示
+    function deactivateRemarkInput(taskId) {
+        const prompt = document.querySelector(`#remarkWrapper_${taskId} .remark-prompt`);
+        const textarea = document.getElementById(`remarkInput_${taskId}`);
+        
+        if (prompt && textarea) {
+            if (textarea.value.trim() === '') {
+                prompt.style.display = 'inline-block';
+                prompt.textContent = '添加备注...'; // 恢复提示文本
+                textarea.style.display = 'none';
+            } else {
+                prompt.style.display = 'none'; // 如果有内容，保持文本框显示
+                // 或者，如果想在有内容时也显示为提示，可以这样：
+                // prompt.textContent = textarea.value;
+                // prompt.style.display = 'inline-block';
+                // textarea.style.display = 'none';
+            }
+        }
+        // 确保数据已更新，但不需要立即保存到 localStorage，等待 saveData 统一处理
+    }
+
+    // 直接更新备注文本框内容
+    function updateRemark(textareaElement) {
+        const taskId = textareaElement.dataset.taskId;
+        const dateKey = textareaElement.dataset.dateKey;
+        let remark = textareaElement.value;
+
+        // 限制字数
+        if (remark.length > 200) {
+            remark = remark.substring(0, 200);
+            textareaElement.value = remark;
+        }
+
+        if (!appData.records[dateKey]) {
+            appData.records[dateKey] = {};
+        }
+        let currentRecord = appData.records[dateKey][taskId] || { checked: false, remark: '' };
+        currentRecord.remark = remark;
+        // 如果用户输入了备注，确保任务被标记为已完成
+        if (remark.trim() !== '') {
+            currentRecord.checked = true;
+        } else if (currentRecord.checked) {
+            // 如果备注被清空但任务仍勾选，保持勾选状态
+        } else {
+            // 如果备注被清空且任务未勾选，保持未勾选状态
+        }
+        appData.records[dateKey][taskId] = currentRecord;
+        // 不立即调用 renderApp() 以避免文本框失去焦点
+        document.getElementById('statusMsg').innerText = '📝 保存~';
     }
 
     function saveData(showAlert = false) {
-        // 保存心情
+        // 保存心情 (在 updateEmotion 中已更新，这里确保最终保存)
         const dateKey = getSelectedDate();
         const emotion = document.getElementById('emotionInput').value;
         if (!appData.dailyInfo) appData.dailyInfo = {};
         if (!appData.dailyInfo[dateKey]) appData.dailyInfo[dateKey] = {};
         appData.dailyInfo[dateKey].emotion = emotion;
-        // 天气在切换时已经保存了
 
         localStorage.setItem('pwa_365_data', JSON.stringify(appData));
         document.getElementById('statusMsg').innerText = '✅ 进度已保存';
-        if(showAlert) alert('保存成功！明天也要继续加油鸭！');
+        if(showAlert) alert('打卡成功！棒棒哒！');
     }
 
+    // 修改：导出数据为 CSV 格式
     function exportData() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+        let csvContent = "日期,任务类别,任务名称,奖励金币,是否完成,备注,当日心情,当日天气\n"; // CSV header
+
+        // 按照日期排序导出
+        const sortedDates = Object.keys(appData.records).sort();
+
+        sortedDates.forEach(dateKey => {
+            const dayRecords = appData.records[dateKey];
+            const dayInfo = appData.dailyInfo[dateKey] || {};
+            // 处理心情和天气中的逗号和引号，用双引号包裹
+            const emotion = dayInfo.emotion ? `"${dayInfo.emotion.replace(/"/g, '""')}"` : '';
+            const weather = dayInfo.weather || '';
+
+            appData.categories.forEach(cat => {
+                cat.tasks.forEach(task => {
+                    const taskRecord = dayRecords[task.id] || { checked: false, remark: '' };
+                    const isChecked = taskRecord.checked ? '是' : '否';
+                    // 处理备注中的逗号和引号，用双引号包裹
+                    const remark = taskRecord.remark ? `"${taskRecord.remark.replace(/"/g, '""')}"` : '';
+
+                    csvContent += `${dateKey},"${cat.name.replace(/"/g, '""')}","${task.name.replace(/"/g, '""')}",${task.points},${isChecked},${remark},${emotion},${weather}\n`;
+                });
+            });
+        });
+
+        // 添加 BOM 以确保 Excel 正确识别中文编码
+        const dataStr = "data:text/csv;charset=utf-8,\ufeff" + encodeURIComponent(csvContent);
         const downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "365_habit_backup_" + getSelectedDate() + ".json");
+        downloadAnchorNode.setAttribute("download", "365_habit_data.csv");
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
@@ -744,6 +944,8 @@
         document.getElementById('taskNameInput').value = '';
         document.getElementById('taskPointsInput').value = '10';
         document.getElementById('customIconInput').value = 'fa-star';
+        // 清除图标选择器的选中状态
+        document.querySelectorAll('#iconSelector .icon-option').forEach(e => e.classList.remove('selected'));
         document.getElementById('taskModal').style.display = 'flex';
     }
 
@@ -757,6 +959,18 @@
         document.getElementById('taskNameInput').value = task.name;
         document.getElementById('taskPointsInput').value = task.points;
         document.getElementById('customIconInput').value = task.icon;
+
+        // 选中对应的图标
+        document.querySelectorAll('#iconSelector .icon-option').forEach(e => {
+            // 确保 e.querySelector('i') 不为空
+            const iconElement = e.querySelector('i');
+            if (iconElement && iconElement.classList.contains(task.icon)) {
+                e.classList.add('selected');
+            } else {
+                e.classList.remove('selected');
+            }
+        });
+
         document.getElementById('taskModal').style.display = 'flex';
     }
 
@@ -789,6 +1003,14 @@
         if(!confirm('确定要删除这个任务吗？')) return;
         const catIndex = appData.categories.findIndex(c => c.id === catId);
         appData.categories[catIndex].tasks = appData.categories[catIndex].tasks.filter(t => t.id !== taskId);
+        
+        // 同时清理所有日期中该任务的记录
+        for (const dateKey in appData.records) {
+            if (appData.records[dateKey][taskId]) {
+                delete appData.records[dateKey][taskId];
+            }
+        }
+
         saveData(false);
         renderApp();
     }
